@@ -4,6 +4,12 @@ SCREEN_WIDTH = 80
 SCREEN_HEIGHT = 50
 LIMIT_FPS = 20
 
+MAP_WIDTH = 80
+MAP_HEIGHT = 45
+
+color_dark_wall = libtcod.Color(0, 0, 100)
+color_dark_ground = libtcod.Color(50, 50, 150)
+
 
 def handle_keys():
 	global playerx, playery
@@ -40,9 +46,10 @@ class Object:
 		self.color = color
 
 	def move(self, dx, dy):
-		# move object by (dx, dy)
-		self.x += dx
-		self.y += dy
+		# move object by (dx, dy) unless blocked
+		if not map[self.x + dx][self.y + dy].blocked:
+			self.x += dx
+			self.y += dy
 
 	def draw(self):
 		# set object color and draw the appropriate
@@ -53,6 +60,47 @@ class Object:
 	def clear(self):
 		# clear the object's character from console
 		libtcod.console_put_char(con, self.x, self.y, ' ', libtcod.BKGND_NONE)
+
+
+class Tile:
+	# A map tile and its properties
+	def __init__(self, blocked, block_sight = None):
+		self.blocked = blocked
+
+		# by default, if a tile is blocked, it also blocks sight
+		if block_sight is None: block_sight = blocked
+		self.block_sight = block_sight
+
+
+def make_map():
+	global map
+
+	# fill map with unblocked tiles
+	map = [[ Tile(False)
+		for y in range(MAP_HEIGHT) ]
+			for x in range(MAP_WIDTH) ]
+
+	map[30][22].blocked = True
+	map[30][22].block_sight = True
+	map[50][22].blocked = True
+	map[50][22].block_sight = True
+
+
+def render_all():
+	# draw all objects in object list
+	for object in objects:
+		object.draw()
+
+	for y in range(MAP_HEIGHT):
+		for x in range(MAP_WIDTH):
+			wall = map[x][y].block_sight
+			if wall:
+				libtcod.console_set_char_background(con, x, y, color_dark_wall, libtcod.BKGND_SET)
+			else:
+				libtcod.console_set_char_background(con, x, y, color_dark_ground, libtcod.BKGND_SET)
+
+	# blit contents of "con" to the root console
+	libtcod.console_blit(con, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, 0, 0, 0)
 
 
 ########################################################
@@ -68,14 +116,12 @@ player = Object(SCREEN_WIDTH/2, SCREEN_HEIGHT/2, '@', libtcod.white)
 npc	   = Object(SCREEN_WIDTH/2 - 5, SCREEN_HEIGHT/2, '@', libtcod.yellow)
 objects = [npc, player]
 
+make_map()
+
 while not libtcod.console_is_window_closed():
 
-	# draw all objects in object list
-	for object in objects:
-		object.draw()
+	render_all()
 
-	# blit contents of "con" to the root console
-	libtcod.console_blit(con, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, 0, 0, 0)
 	libtcod.console_flush()
 
 	# clear objects at their previous location
