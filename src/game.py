@@ -15,6 +15,8 @@ FOV_ALGO = 0
 FOV_LIGHT_WALLS = True
 TORCH_RADIUS = 10
 
+MAX_ROOM_MONSTERS = 3
+
 color_dark_wall = libtcod.Color(0, 0, 100)
 color_light_wall = libtcod.Color(130, 110, 50)
 color_dark_ground = libtcod.Color(50, 50, 150)
@@ -163,6 +165,9 @@ def make_map():
 					create_v_tunnel(prev_y, new_y, prev_x)
 					create_h_tunnel(prev_x, new_x, new_y)
 
+			# add objects to the new room
+			place_objects(new_room)
+
 			# append new room to list
 			rooms.append(new_room)
 			num_rooms += 1
@@ -229,6 +234,25 @@ def create_v_tunnel(y1, y2, x):
 		map[x][y].block_sight = False
 
 
+def place_objects(room):
+	# choose random number of monsters
+	num_monsters = libtcod.random_get_int(0, 0, MAX_ROOM_MONSTERS)
+
+	for i in range(num_monsters):
+		# choose random spot for this monster
+		x = libtcod.random_get_int(0, room.x1, room.x2)
+		y = libtcod.random_get_int(0, room.y1, room.y2)
+
+		if libtcod.random_get_int(0, 0, 100) < 80: # 80% chance of getting an orc
+			# create orc
+			monster = Object(x, y, 'o', libtcod.desaturated_green)
+		else:
+			# create a troll
+			monster = Object(x, y, 'T', libtcod.darker_green)
+
+		objects.append(monster)
+
+
 ########################################################
 # Window setup and main game loop
 ########################################################
@@ -239,8 +263,7 @@ libtcod.sys_set_fps(LIMIT_FPS)
 con = libtcod.console_new(SCREEN_WIDTH, SCREEN_HEIGHT)
 
 player = Object(SCREEN_WIDTH/2, SCREEN_HEIGHT/2, '@', libtcod.white)
-npc	   = Object(SCREEN_WIDTH/2 - 5, SCREEN_HEIGHT/2, '@', libtcod.yellow)
-objects = [npc, player]
+objects = [player]
 
 make_map()
 
