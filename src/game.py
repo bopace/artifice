@@ -27,7 +27,9 @@ color_light_ground = libtcod.Color(200, 180, 50)
 class Object:
 	# Generic object used for various game features
 	# always represented by a character in console
-	def __init__(self, x, y, char, color):
+	def __init__(self, x, y, char, name, color, blocks=False):
+		self.name = name
+		self.blocks = blocks
 		self.x = x
 		self.y = y
 		self.char = char
@@ -35,7 +37,7 @@ class Object:
 
 	def move(self, dx, dy):
 		# move object by (dx, dy) unless blocked
-		if not map[self.x + dx][self.y + dy].blocked:
+		if not is_blocked(self.x + dx, self.y + dy):
 			self.x += dx
 			self.y += dy
 
@@ -243,14 +245,29 @@ def place_objects(room):
 		x = libtcod.random_get_int(0, room.x1, room.x2)
 		y = libtcod.random_get_int(0, room.y1, room.y2)
 
-		if libtcod.random_get_int(0, 0, 100) < 80: # 80% chance of getting an orc
-			# create orc
-			monster = Object(x, y, 'o', libtcod.desaturated_green)
-		else:
-			# create a troll
-			monster = Object(x, y, 'T', libtcod.darker_green)
+		# place if tile is not blocked
+		if not is_blocked(x, y):
+			if libtcod.random_get_int(0, 0, 100) < 80: # 80% chance of getting an orc
+				# create orc
+				monster = Object(x, y, 'o', 'orc', libtcod.desaturated_green, blocks=True)
+			else:
+				# create a troll
+				monster = Object(x, y, 'T', 'troll', libtcod.darker_green, blocks=True)
 
-		objects.append(monster)
+			objects.append(monster)
+
+
+def is_blocked(x, y):
+	# test the tile map
+	if map[x][y].blocked:
+		return True
+
+	# check for blocking objects
+	for obj in objects:
+		if obj.blocks and obj.x == x and obj.y == y:
+			return True
+
+	return False
 
 
 ########################################################
@@ -262,7 +279,7 @@ libtcod.console_init_root(SCREEN_WIDTH, SCREEN_HEIGHT, 'ARTIFICE', False)
 libtcod.sys_set_fps(LIMIT_FPS)
 con = libtcod.console_new(SCREEN_WIDTH, SCREEN_HEIGHT)
 
-player = Object(SCREEN_WIDTH/2, SCREEN_HEIGHT/2, '@', libtcod.white)
+player = Object(0, 0, '@', 'player', libtcod.white, blocks=True)
 objects = [player]
 
 make_map()
