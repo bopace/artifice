@@ -94,24 +94,27 @@ def handle_keys():
 		libtcod.console_set_fullscreen(not libtcod.console_is_fullscreen())
 
 	elif key.vk == libtcod.KEY_ESCAPE:
-		return True		# exit game
+		return 'exit'		# exit game
 
-	#movement keys
-	if libtcod.console_is_key_pressed(libtcod.KEY_UP):
-		player.move(0, -1)
-		fov_recompute = True
+	if game_state == 'playing':
+		#movement keys
+		if libtcod.console_is_key_pressed(libtcod.KEY_UP):
+			player_move_or_attack(0, -1)
+			fov_recompute = True
 
-	elif libtcod.console_is_key_pressed(libtcod.KEY_DOWN):
-		player.move(0, 1)
-		fov_recompute = True
+		elif libtcod.console_is_key_pressed(libtcod.KEY_DOWN):
+			player_move_or_attack(0, 1)
+			fov_recompute = True
 
-	elif libtcod.console_is_key_pressed(libtcod.KEY_LEFT):
-		player.move(-1, 0)
-		fov_recompute = True
+		elif libtcod.console_is_key_pressed(libtcod.KEY_LEFT):
+			player_move_or_attack(-1, 0)
+			fov_recompute = True
 
-	elif libtcod.console_is_key_pressed(libtcod.KEY_RIGHT):
-		player.move(1, 0)
-		fov_recompute = True
+		elif libtcod.console_is_key_pressed(libtcod.KEY_RIGHT):
+			player_move_or_attack(1, 0)
+			fov_recompute = True
+		else:
+			return 'didnt-take-turn'
 
 
 def make_map():
@@ -270,6 +273,28 @@ def is_blocked(x, y):
 	return False
 
 
+def player_move_or_attack(dx, dy):
+	global fov_recompute
+
+	# direction player is moving or attacking
+	x = player.x + dx
+	y = player.y + dy
+
+	# look for attackable object
+	target = None
+	for obj in objects:
+		if obj.x == x and obj.y == y:
+			target = obj
+			break
+
+	# attack if target found, move otherwise
+	if target is not None:
+		print 'The ' + target.name + ' laughs at your puny efforts to attack him!'
+	else:
+		player.move(dx, dy)
+		fov_recompute = True
+
+
 ########################################################
 # Window setup and main game loop
 ########################################################
@@ -291,6 +316,9 @@ for y in range(MAP_HEIGHT):
 
 fov_recompute = True
 
+game_state = 'playing'
+player_action = None
+
 while not libtcod.console_is_window_closed():
 
 	render_all()
@@ -302,6 +330,12 @@ while not libtcod.console_is_window_closed():
 		object.clear()
 
 	# handle keys and exit game if esc is pressed
-	exit = handle_keys()
-	if exit:
+	player_action = handle_keys()
+	if player_action == 'exit':
 		break
+
+	# let monsters take their turn
+	if game_state == 'playing' and player_action != 'didnt-take-turn':
+		for obj in objects:
+			if obj != player:
+				print 'The ' + obj.name + ' growls!'
