@@ -18,6 +18,11 @@ TORCH_RADIUS = 10
 
 MAX_ROOM_MONSTERS = 3
 
+# game speeds
+PLAYER_SPEED = 2
+DEFAULT_SPEED = 8
+DEFAULT_ATTACK_SPEED = 20
+
 color_dark_wall = libtcod.Color(0, 0, 100)
 color_light_wall = libtcod.Color(130, 110, 50)
 color_dark_ground = libtcod.Color(50, 50, 150)
@@ -28,13 +33,15 @@ color_light_ground = libtcod.Color(200, 180, 50)
 class Object:
 	# Generic object used for various game features
 	# always represented by a character in console
-	def __init__(self, x, y, char, name, color, blocks=False, fighter=None, ai=None):
+	def __init__(self, x, y, char, name, color, blocks=False, fighter=None, ai=None, speed=DEFAULT_SPEED):
 		self.name = name
 		self.blocks = blocks
 		self.x = x
 		self.y = y
 		self.char = char
 		self.color = color
+		self.speed = speed
+		self.wait = 0
 
 		self.fighter = fighter
 		if self.fighter:
@@ -49,6 +56,8 @@ class Object:
 		if not is_blocked(self.x + dx, self.y + dy):
 			self.x += dx
 			self.y += dy
+		
+		self.wait = self.speed
 
 	def draw(self):
 		# if an object is in player's FOV
@@ -119,12 +128,13 @@ class Rect:
 
 class Fighter:
 	# combat-related properties and methods (monster, player, npc)
-	def __init__(self, hp, defense, power, death_function=None):
+	def __init__(self, hp, defense, power, death_function=None, attack_speed=DEFAULT_ATTACK_SPEED):
 		self.max_hp = hp
 		self.hp = hp
 		self.defense = defense
 		self.power = power
 		self.death_function = death_function
+		self.attack_speed = attack_speed
 
 	def take_damage(self, damage):
 		if damage > 0:
@@ -172,6 +182,10 @@ def handle_keys():
 		return 'exit'		# exit game
 
 	if game_state == 'playing':
+		if player.wait > 1: # still waiting, don't take turn
+			player.wait -= 1
+			return
+		
 		#movement keys
 		if libtcod.console_is_key_pressed(libtcod.KEY_UP):
 			player_move_or_attack(0, -1)
@@ -418,7 +432,7 @@ con = libtcod.console_new(SCREEN_WIDTH, SCREEN_HEIGHT)
 
 # create player object
 fighter_component = Fighter(hp=30, defense=2, power=5, death_function=player_death)
-player = Object(0, 0, '@', 'player', libtcod.white, blocks=True, fighter=fighter_component)
+player = Object(0, 0, '@', 'player', libtcod.white, blocks=True, fighter=fighter_component, speed=PLAYER_SPEED)
 
 objects = [player]
 
@@ -450,7 +464,10 @@ while not libtcod.console_is_window_closed():
 		break
 
 	# let monsters take their turn
-	if game_state == 'playing' and player_action != 'didnt-take-turn':
+	if game_state == 'playing':
 		for obj in objects:
 			if obj.ai:
-				obj.ai.take_turn()
+				if obj.wait > 0: # still waiting, don't take turn
+					obj.wait -= 1
+				else:
+					obj.ai.take_turn()
