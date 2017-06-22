@@ -6,7 +6,7 @@ SCREEN_HEIGHT = 50
 LIMIT_FPS = 20
 
 MAP_WIDTH = 80
-MAP_HEIGHT = 45
+MAP_HEIGHT = 43
 
 ROOM_MAX_SIZE = 10
 ROOM_MIN_SIZE = 6
@@ -22,6 +22,11 @@ MAX_ROOM_MONSTERS = 3
 PLAYER_SPEED = 2
 DEFAULT_SPEED = 8
 DEFAULT_ATTACK_SPEED = 20
+
+# GUI constants
+BAR_WIDTH = 20
+PANEL_HEIGHT = 7
+PANEL_Y = SCREEN_HEIGHT - PANEL_HEIGHT
 
 color_dark_wall = libtcod.Color(0, 0, 100)
 color_light_wall = libtcod.Color(130, 110, 50)
@@ -306,10 +311,16 @@ def render_all():
 	# blit contents of "con" to the root console
 	libtcod.console_blit(con, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, 0, 0, 0)
 
-	# show the player's stats
-	libtcod.console_set_default_foreground(con, libtcod.white)
-	libtcod.console_print_ex(con, 1, SCREEN_HEIGHT - 2, libtcod.BKGND_NONE, libtcod.LEFT,
-		'HP: ' + str(player.fighter.hp) + '/' + str(player.fighter.max_hp))
+	# prepare to render GUI panel
+	libtcod.console_set_default_background(panel, libtcod.black)
+	libtcod.console_clear(panel)
+
+	# show player stats
+	render_bar(1, 1, BAR_WIDTH, 'HP', player.fighter.hp, player.fighter.max_hp,
+		libtcod.light_red, libtcod.darker_red)
+	
+	# blit contents of panel to root console
+	libtcod.console_blit(panel, 0, 0, SCREEN_WIDTH, PANEL_HEIGHT, 0, 0, PANEL_Y)
 
 
 def create_room(room):
@@ -421,6 +432,24 @@ def monster_death(monster):
 	monster.send_to_back()
 
 
+def render_bar(x, y, total_width, name, value, maximum, bar_color, back_color):
+	bar_width = int(float(value) / maximum * total_width)
+
+	# render background first
+	libtcod.console_set_default_background(panel, back_color)
+	libtcod.console_rect(panel, x, y, total_width, 1, False, libtcod.BKGND_SCREEN)
+
+	# render bar on top
+	libtcod.console_set_default_background(panel, bar_color)
+	if bar_width > 0:
+		libtcod.console_rect(panel, x, y, bar_width, 1, False, libtcod.BKGND_SCREEN)
+	
+	# text above bar
+	libtcod.console_set_default_foreground(panel, libtcod.white)
+	libtcod.console_print_ex(panel, x + total_width / 2, y, libtcod.BKGND_NONE, libtcod.CENTER,
+		name + ': ' + str(value) + '/' + str(maximum))
+
+
 ########################################################
 # Window setup and main game loop
 ########################################################
@@ -447,6 +476,8 @@ fov_recompute = True
 
 game_state = 'playing'
 player_action = None
+
+panel = libtcod.console_new(SCREEN_WIDTH, PANEL_HEIGHT)
 
 while not libtcod.console_is_window_closed():
 
