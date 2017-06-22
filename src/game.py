@@ -338,5 +338,4 @@ while not libtcod.console_is_window_closed():
 	if game_state == 'playing' and player_action != 'didnt-take-turn':
 		for obj in objects:
 			if obj != player:
-				# print 'The ' + obj.name + ' growls!'
-				pass
+				print 'The ' + obj.name + ' growls!'
